@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { View, Text, ScrollView, StyleSheet, Alert, Switch } from 'react-native';
 import * as LocalAuthentication from 'expo-local-authentication';
+import * as ImagePicker from 'expo-image-picker';
 import { Header, Card, Button, Input } from '../../../shared/components';
 import { colors, typography, spacing } from '../../../core/theme';
 import { db } from '../../../core/database';
@@ -15,6 +16,28 @@ const SettingsScreen = () => {
     const [showBackup, setShowBackup] = useState(false);
     const [groqKey, setGroqKey] = useState(settings?.groq_api_key || '');
     const [isSavingKey, setIsSavingKey] = useState(false);
+
+    const [customName, setCustomName] = useState(settings?.custom_app_name || '');
+    const [customLogo, setCustomLogo] = useState(settings?.custom_app_logo || null);
+
+    const handlePickImage = async () => {
+        let result = await ImagePicker.launchImageLibraryAsync({
+            mediaTypes: ['images'],
+            allowsEditing: true,
+            aspect: [1, 1],
+            quality: 0.8,
+        });
+
+        if (!result.canceled) {
+            setCustomLogo(result.assets[0].uri);
+            updateSetting('custom_app_logo', result.assets[0].uri);
+        }
+    };
+
+    const handleSaveName = async () => {
+        await updateSetting('custom_app_name', customName);
+        Alert.alert('Saved', 'Custom App Name updated successfully.');
+    };
 
     const handleSaveGroqKey = async () => {
         setIsSavingKey(true);
@@ -107,6 +130,30 @@ const SettingsScreen = () => {
                     />
                 </Card>
                 <Card style={styles.section}>
+                    <Text style={styles.sectionTitle}>APP APPEARANCE</Text>
+                    <Input
+                        label="CUSTOM APP NAME"
+                        value={customName}
+                        onChangeText={setCustomName}
+                        placeholder="e.g. My Workspace"
+                    />
+                    <Button title="Save Name" variant="secondary" onPress={handleSaveName} style={styles.btn} />
+
+                    <View style={styles.logoRow}>
+                        <Text style={styles.toggleTitle}>Custom App Logo</Text>
+                        <Button title={customLogo ? "Change Logo" : "Select Logo"} onPress={handlePickImage} variant="secondary" />
+                    </View>
+                    {customLogo && (
+                        <View style={styles.previewContainer}>
+                            <Text style={styles.previewText}>Preview:</Text>
+                            <View style={styles.logoPreviewBadge}>
+                                <Text style={{ color: colors.background, fontWeight: 'bold' }}>Logo Selected</Text>
+                            </View>
+                            <Button title="Clear Logo" variant="danger" onPress={() => { setCustomLogo(null); updateSetting('custom_app_logo', ''); }} style={{ marginTop: 8 }} />
+                        </View>
+                    )}
+                </Card>
+                <Card style={styles.section}>
                     <Text style={styles.sectionTitle}>BACKUP & RESTORE</Text>
                     <Button title="Export JSON Backup" onPress={handleExport} style={styles.btn} />
                     {showBackup ? (
@@ -161,5 +208,9 @@ const styles = StyleSheet.create({
     toggleTextContainer: { flex: 1, paddingRight: spacing.md },
     toggleTitle: { ...typography.bodyBold, color: colors.textPrimary, marginBottom: 4 },
     toggleSub: { ...typography.caption, color: colors.textSecondary },
+    logoRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginTop: spacing.md, marginBottom: spacing.sm },
+    previewContainer: { marginTop: spacing.sm, padding: spacing.sm, backgroundColor: 'rgba(255,255,255,0.05)', borderRadius: 8 },
+    previewText: { ...typography.caption, color: colors.textSecondary, marginBottom: spacing.xs },
+    logoPreviewBadge: { width: 100, height: 100, borderRadius: 50, backgroundColor: colors.accent, alignSelf: 'center', alignItems: 'center', justifyContent: 'center' },
 });
 export default SettingsScreen;

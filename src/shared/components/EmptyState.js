@@ -1,11 +1,11 @@
 import React from 'react';
 import { View, Text, StyleSheet } from 'react-native';
-import { MaterialCommunityIcons } from '@expo/vector-icons';
-import { colors, typography, spacing } from '../../core/theme';
+import { Inbox } from 'lucide-react-native';
+import { colors, spacing, typography } from '../../core/theme';
 
-export const EmptyState = ({ icon, title, message }) => (
+export const EmptyState = ({ icon, title, message, customIcon }) => (
     <View style={styles.container}>
-        <MaterialCommunityIcons name={icon || 'inbox-outline'} size={48} color={colors.textMuted} />
+        {customIcon || <Inbox size={48} color={colors.textMuted} />}
         <Text style={styles.title}>{title}</Text>
         {message ? <Text style={styles.message}>{message}</Text> : null}
     </View>

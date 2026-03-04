@@ -1,7 +1,7 @@
 import React, { useMemo, useState } from 'react';
 import { View, Text, TouchableOpacity, StyleSheet, Platform } from 'react-native';
 import DateTimePicker from '@react-native-community/datetimepicker';
-import { MaterialCommunityIcons } from '@expo/vector-icons';
+import { CalendarClock } from 'lucide-react-native';
 import { colors, typography, spacing, borderRadius } from '../../core/theme';
 import { formatDate, formatDateTime } from '../utils';
 
@@ -82,7 +82,7 @@ export const DateTimeField = ({ label, value, onChange, mode = 'date', placehold
             {label ? <Text style={styles.label}>{label}</Text> : null}
             <TouchableOpacity style={styles.field} activeOpacity={0.85} onPress={openPicker}>
                 <Text style={[styles.value, !value && styles.placeholder]} numberOfLines={1}>{displayValue}</Text>
-                <MaterialCommunityIcons name="calendar-clock" size={18} color={colors.textMuted} />
+                <CalendarClock size={18} color={colors.textMuted} />
             </TouchableOpacity>
             {open ? (
                 <DateTimePicker

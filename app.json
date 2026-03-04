@@ -41,8 +41,22 @@
         }
       ],
       "expo-asset",
+      "expo-file-system",
       "expo-font",
-      "react-native-android-widget"
+      [
+        "react-native-android-widget",
+        {
+          "widgets": [
+            {
+              "name": "ProgressWidget",
+              "description": "Today's Progress",
+              "previewImage": "./assets/icon.png",
+              "minWidth": "110dp",
+              "minHeight": "110dp"
+            }
+          ]
+        }
+      ]
     ],
     "extra": {
       "eas": {

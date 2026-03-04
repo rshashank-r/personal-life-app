@@ -1,11 +1,11 @@
 import React from 'react';
 import { TouchableOpacity, StyleSheet } from 'react-native';
-import { MaterialCommunityIcons } from '@expo/vector-icons';
+import { Plus } from 'lucide-react-native';
 import { colors, spacing } from '../../core/theme';
 
 export const FAB = ({ onPress, icon = 'plus' }) => (
     <TouchableOpacity style={styles.fab} onPress={onPress} activeOpacity={0.8}>
-        <MaterialCommunityIcons name={icon} size={28} color="#000" />
+        <Plus size={28} color="#000" />
     </TouchableOpacity>
 );
 

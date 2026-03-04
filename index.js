@@ -1,8 +1,14 @@
 import { registerRootComponent } from 'expo';
+import { registerWidgetTaskHandler } from 'react-native-android-widget';
+import { widgetTaskHandler } from './widgetTaskHandler';
 
 import App from './App';
 
-// registerRootComponent calls AppRegistry.registerComponent('main', () => App);
-// It also ensures that whether you load the app in Expo Go or in a native build,
-// the environment is set up appropriately
+import { AppRegistry } from 'react-native';
+
+// Register the widget task hander explicitly for the native background headless task lookup
+AppRegistry.registerHeadlessTask('RNWidgetBackgroundTask', () => widgetTaskHandler);
+registerWidgetTaskHandler(widgetTaskHandler);
+
+// Finally load expo App component
 registerRootComponent(App);

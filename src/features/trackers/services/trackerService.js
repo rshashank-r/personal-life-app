@@ -72,8 +72,8 @@ const trackerService = {
         } else {
             const id = generateId();
             await db.run(
-                'INSERT INTO tracker_entries (id, tracker_id, date, value) VALUES (?, ?, ?, ?)',
-                [id, trackerId, date, value],
+                'INSERT INTO tracker_entries (id, tracker_id, date, value, created_at) VALUES (?, ?, ?, ?, ?)',
+                [id, trackerId, date, value, new Date().toISOString()],
             );
         }
     },

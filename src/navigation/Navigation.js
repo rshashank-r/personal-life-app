@@ -1,7 +1,7 @@
 import React from 'react';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
-import { MaterialCommunityIcons } from '@expo/vector-icons';
+import { LayoutDashboard, CheckSquare, Bell, TrendingUp, MoreHorizontal } from 'lucide-react-native';
 import { colors } from '../core/theme';
 
 // Screens
@@ -98,11 +98,11 @@ function MoreStack() {
 }
 
 const tabIcons = {
-    Dashboard: ['view-dashboard', 'view-dashboard-outline'],
-    Tasks: ['checkbox-marked-circle', 'checkbox-marked-circle-outline'],
-    Reminders: ['bell', 'bell-outline'],
-    Trackers: ['chart-line', 'chart-line-variant'],
-    More: ['dots-horizontal-circle', 'dots-horizontal-circle-outline'],
+    Dashboard: LayoutDashboard,
+    Tasks: CheckSquare,
+    Reminders: Bell,
+    Trackers: TrendingUp,
+    More: MoreHorizontal,
 };
 
 export default function Navigation() {
@@ -111,8 +111,8 @@ export default function Navigation() {
             screenOptions={({ route }) => ({
                 headerShown: false,
                 tabBarIcon: ({ focused, color, size }) => {
-                    const [active, inactive] = tabIcons[route.name];
-                    return <MaterialCommunityIcons name={focused ? active : inactive} size={22} color={color} />;
+                    const IconComponent = tabIcons[route.name];
+                    return <IconComponent size={22} color={color} strokeWidth={focused ? 2.5 : 2} />;
                 },
                 tabBarActiveTintColor: colors.tabActive,
                 tabBarInactiveTintColor: colors.tabInactive,

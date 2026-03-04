@@ -45,3 +45,14 @@ export const getDaysBetween = (d1, d2) => {
     const b = new Date(d2);
     return Math.round((b - a) / (1000 * 60 * 60 * 24));
 };
+
+export const getDateRange = (days) => {
+    const dates = [];
+    const today = new Date();
+    for (let i = days - 1; i >= 0; i--) {
+        const d = new Date(today);
+        d.setDate(today.getDate() - i);
+        dates.push(d.toISOString().split('T')[0]);
+    }
+    return dates;
+};

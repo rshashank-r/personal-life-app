@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { View, Text, StyleSheet, AppState } from 'react-native';
 import * as LocalAuthentication from 'expo-local-authentication';
-import { MaterialCommunityIcons } from '@expo/vector-icons';
+import { ShieldAlert } from 'lucide-react-native';
 import { colors, typography, spacing } from '../../core/theme';
 import useProfileStore from '../../core/store/useProfileStore';
 import { Button } from './Button';
@@ -87,7 +87,7 @@ export const PrivacyShield = ({ children }) => {
         <View style={styles.container}>
             <View style={styles.content}>
                 <View style={styles.iconContainer}>
-                    <MaterialCommunityIcons name="shield-lock-outline" size={64} color={colors.accent} />
+                    <ShieldAlert size={64} color={colors.accent} />
                 </View>
                 <Text style={styles.title}>App Locked</Text>
                 <Text style={styles.subtitle}>Privacy Mode is enabled.</Text>

@@ -1,8 +1,8 @@
 import React, { useState, useCallback } from 'react';
 import { View, FlatList, Text, StyleSheet, TouchableOpacity } from 'react-native';
 import { useFocusEffect } from '@react-navigation/native';
-import { MaterialCommunityIcons } from '@expo/vector-icons';
-import { Header, FAB, Modal, EmptyState, FilterChips, Card, Button, Input, PriorityBadge, DateTimeField } from '../../../shared/components';
+import { CalendarClock, Timer, CheckSquare, Circle, CheckCircle2 } from 'lucide-react-native';
+import { Header, FAB, Modal, EmptyState, FilterChips, Card, Button, Input, DateTimeField } from '../../../shared/components';
 import useTaskStore from '../store/taskStore';
 import { colors, typography, spacing } from '../../../core/theme';
 import { getRelativeDate } from '../../../shared/utils';
@@ -16,21 +16,54 @@ const FILTERS = [
     { label: 'Low', value: 'low' },
 ];
 
+const getPriorityColor = (priority) => {
+    switch (priority) {
+        case 'high': return colors.error;
+        case 'medium': return colors.warning;
+        case 'low': return colors.success;
+        default: return colors.textMuted;
+    }
+};
+
+const getPriorityBgColor = (priority) => {
+    switch (priority) {
+        case 'high': return 'rgba(239, 68, 68, 0.1)';
+        case 'medium': return 'rgba(245, 158, 11, 0.1)';
+        case 'low': return 'rgba(52, 211, 153, 0.1)';
+        default: return 'rgba(255, 255, 255, 0.05)';
+    }
+};
+
 const TaskItem = ({ task, onToggle, onPress }) => (
-    <Card onPress={onPress} style={styles.taskCard}>
-        <View style={styles.taskRow}>
+    <Card onPress={onPress} style={[styles.taskCard, { borderLeftWidth: 4, borderLeftColor: getPriorityColor(task.priority) }]}>
+        <View style={styles.taskHeaderRow}>
             <TouchableOpacity onPress={onToggle} style={styles.checkbox}>
-                <MaterialCommunityIcons
-                    name={task.completed ? 'checkbox-marked-circle' : 'checkbox-blank-circle-outline'}
-                    size={22}
-                    color={task.completed ? colors.success : colors.textMuted}
-                />
+                {task.completed ? (
+                    <CheckCircle2 size={28} color={colors.success} />
+                ) : (
+                    <Circle size={28} color={colors.textMuted} />
+                )}
             </TouchableOpacity>
-            <View style={styles.taskContent}>
-                <Text style={[styles.taskTitle, task.completed && styles.completed]} numberOfLines={1}>{task.title}</Text>
-                {task.due_date ? <Text style={styles.taskDate}>{getRelativeDate(task.due_date)}</Text> : null}
+            <Text style={[styles.taskTitle, task.completed && styles.completed]} numberOfLines={1}>{task.title}</Text>
+        </View>
+        <View style={styles.taskDetailsRow}>
+            {task.due_date ? (
+                <View style={styles.detailBadge}>
+                    <CalendarClock size={14} color={colors.textSecondary} />
+                    <Text style={styles.detailText}>{getRelativeDate(task.due_date)}</Text>
+                </View>
+            ) : null}
+            <View style={[styles.detailBadge, { backgroundColor: getPriorityBgColor(task.priority) }]}>
+                <Text style={[styles.detailText, { color: getPriorityColor(task.priority), fontWeight: '600', textTransform: 'capitalize' }]}>
+                    {task.priority} Priority
+                </Text>
             </View>
-            <PriorityBadge priority={task.priority} />
+            {task.duration_minutes ? (
+                <View style={styles.detailBadge}>
+                    <Timer size={14} color={colors.textSecondary} />
+                    <Text style={styles.detailText}>{task.duration_minutes} min</Text>
+                </View>
+            ) : null}
         </View>
     </Card>
 );
@@ -84,7 +117,7 @@ const TaskListScreen = ({ navigation }) => {
             <Header title="Tasks" subtitle={`${pending.length} pending`} />
             <FilterChips options={FILTERS} selected={filter} onSelect={setFilter} />
             {filtered.length === 0 ? (
-                <EmptyState icon="checkbox-marked-circle-outline" title="No tasks" message="Tap + to add a task" />
+                <EmptyState icon="checkbox-marked-circle-outline" title="No tasks" message="Tap + to add a task" customIcon={<CheckSquare size={48} color={colors.textMuted} />} />
             ) : (
                 <FlatList
                     data={[...pending, ...done]}
@@ -127,14 +160,54 @@ const TaskListScreen = ({ navigation }) => {
 
 const styles = StyleSheet.create({
     container: { flex: 1, backgroundColor: colors.background },
-    list: { paddingHorizontal: spacing.lg, paddingBottom: 100 },
-    taskCard: { marginBottom: spacing.sm },
-    taskRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm },
-    checkbox: { padding: spacing.xs },
-    taskContent: { flex: 1 },
-    taskTitle: { ...typography.bodyBold, color: colors.textPrimary },
-    completed: { textDecorationLine: 'line-through', color: colors.textMuted },
-    taskDate: { ...typography.caption, color: colors.textSecondary, marginTop: 2 },
+    list: { paddingHorizontal: spacing.lg, paddingBottom: 100, paddingTop: spacing.sm },
+
+    // Task Card Stylings
+    taskCard: {
+        marginBottom: spacing.md,
+        padding: spacing.md,
+        borderRadius: 12,
+    },
+    taskHeaderRow: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        marginBottom: spacing.sm,
+        gap: spacing.sm
+    },
+    checkbox: {
+        marginRight: spacing.xs
+    },
+    taskTitle: {
+        ...typography.bodyBold,
+        color: colors.textPrimary,
+        fontSize: 18,
+        flex: 1
+    },
+    completed: {
+        textDecorationLine: 'line-through',
+        color: colors.textMuted
+    },
+    taskDetailsRow: {
+        flexDirection: 'row',
+        flexWrap: 'wrap',
+        gap: spacing.sm,
+        paddingLeft: 40 // Align with text start
+    },
+    detailBadge: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        backgroundColor: 'rgba(255,255,255,0.05)',
+        paddingHorizontal: spacing.sm,
+        paddingVertical: 4,
+        borderRadius: 8,
+        gap: 4
+    },
+    detailText: {
+        ...typography.caption,
+        color: colors.textSecondary
+    },
+
+    // Form Stylings
     priorityRow: { flexDirection: 'row', gap: spacing.sm, marginBottom: spacing.lg },
     actions: { flexDirection: 'row', gap: spacing.md, marginTop: spacing.lg, paddingBottom: spacing.xl },
 });

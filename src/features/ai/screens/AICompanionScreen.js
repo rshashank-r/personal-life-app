@@ -1,12 +1,12 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { View, Text, StyleSheet, ScrollView, TextInput, TouchableOpacity, ActivityIndicator, KeyboardAvoidingView, Platform, Alert } from 'react-native';
-import { MaterialCommunityIcons } from '@expo/vector-icons';
-import { Header, Card } from '../../../shared/components';
+import { Bot, RefreshCw, Lightbulb, MessageSquare, ArrowUp } from 'lucide-react-native';
+import { Header, Card, Button } from '../../../shared/components';
 import { colors, typography, spacing } from '../../../core/theme';
 import aiService from '../../../core/services/aiService';
 
 const AICompanionScreen = () => {
-    const [insights, setInsights] = useState(null);
+    const [insightsRaw, setInsightsRaw] = useState(null);
     const [loadingInsights, setLoadingInsights] = useState(false);
 
     const [messages, setMessages] = useState([]);
@@ -17,7 +17,7 @@ const AICompanionScreen = () => {
         setLoadingInsights(true);
         try {
             const data = await aiService.generateLifeInsights();
-            setInsights(data);
+            setInsightsRaw(data);
         } catch (error) {
             Alert.alert("AI Error", error.message);
         } finally {
@@ -39,87 +39,123 @@ const AICompanionScreen = () => {
             setMessages([...newHistory, { role: 'assistant', content: reply }]);
         } catch (error) {
             Alert.alert("Chat Error", error.message);
-            // Optionally, remove the user message if it failed
         } finally {
             setIsThinking(false);
         }
     };
 
+    // Parse insights strings into bullet points or separate sentences
+    const insightPoints = insightsRaw
+        ? insightsRaw.split(/\n+/).map(s => s.trim()).filter(Boolean)
+        : [];
+
     return (
         <View style={styles.container}>
-            <Header title="Personal AI" back />
+            <Header title="AI Insights" back />
             <KeyboardAvoidingView
                 style={{ flex: 1 }}
-                behavior={Platform.OS === 'ios' ? 'padding' : null}
+                behavior={Platform.OS === 'ios' ? 'padding' : undefined}
             >
-                <ScrollView contentContainerStyle={styles.scroll}>
-                    <Card style={styles.headerCard}>
-                        <MaterialCommunityIcons name="robot-outline" size={32} color={colors.accent} />
-                        <Text style={styles.headerTitle}>Context-Aware AI</Text>
-                        <Text style={styles.headerSub}>Analyzes your habits, tasks, and memories to provide actionable insights.</Text>
-                    </Card>
+                <ScrollView contentContainerStyle={styles.scroll} showsVerticalScrollIndicator={false}>
 
-                    <View style={styles.section}>
-                        <View style={styles.sectionHeader}>
-                            <Text style={styles.sectionTitle}>LIFE INSIGHTS</Text>
-                            <TouchableOpacity onPress={loadInsights} disabled={loadingInsights}>
-                                <MaterialCommunityIcons name="refresh" size={20} color={colors.accent} />
-                            </TouchableOpacity>
-                        </View>
-                        <Card glow style={styles.insightsCard}>
-                            {loadingInsights ? (
-                                <View style={styles.loadingBox}>
-                                    <ActivityIndicator color={colors.accent} />
-                                    <Text style={styles.loadingText}>Analyzing your life data...</Text>
+                    {/* Insights Section */}
+                    <View style={styles.insightsSection}>
+                        {!insightsRaw && !loadingInsights && (
+                            <View style={styles.generateContainer}>
+                                <View style={styles.robotIconContainer}>
+                                    <Bot size={48} color={colors.accent} />
                                 </View>
-                            ) : insights ? (
-                                <Text style={styles.insightText}>{insights}</Text>
-                            ) : (
-                                <TouchableOpacity style={styles.btnAction} onPress={loadInsights}>
-                                    <MaterialCommunityIcons name="lightning-bolt" size={20} color={colors.surface} />
-                                    <Text style={styles.btnActionText}>Generate Daily Insights</Text>
+                                <Text style={styles.generateTitle}>Discover Patterns</Text>
+                                <Text style={styles.generateSub}>Let AI analyze your habits and tasks to provide personalized recommendations.</Text>
+                                <Button title="Generate insights" onPress={loadInsights} style={styles.generateBtn} />
+                            </View>
+                        )}
+
+                        {loadingInsights && (
+                            <View style={styles.loadingBox}>
+                                <ActivityIndicator color={colors.accent} size="large" />
+                                <Text style={styles.loadingText}>Analyzing your data...</Text>
+                            </View>
+                        )}
+
+                        {insightsRaw && !loadingInsights && (
+                            <View style={styles.insightsContainer}>
+                                <View style={styles.insightsHeader}>
+                                    <Text style={styles.sectionTitle}>Your Insights</Text>
+                                    <TouchableOpacity onPress={loadInsights}>
+                                        <RefreshCw size={24} color={colors.textSecondary} />
+                                    </TouchableOpacity>
+                                </View>
+                                {insightPoints.length > 0 ? (
+                                    insightPoints.map((point, idx) => (
+                                        <Card key={`insight-${idx}`} glow style={styles.insightCardItem}>
+                                            <Lightbulb size={24} color={colors.warning} style={styles.insightIcon} />
+                                            <Text style={styles.insightText}>{point}</Text>
+                                        </Card>
+                                    ))
+                                ) : (
+                                    <Card style={styles.insightCardItem}>
+                                        <Text style={styles.insightText}>Not enough data to generate insights today.</Text>
+                                    </Card>
+                                )}
+                            </View>
+                        )}
+                    </View>
+
+                    {/* Chat Assistant Section */}
+                    <View style={styles.chatSection}>
+                        <Text style={styles.sectionTitle}>Chat Assistant</Text>
+
+                        <Card style={styles.chatContainer}>
+                            <ScrollView nestedScrollEnabled style={{ maxHeight: 300, minHeight: 200 }}>
+                                {messages.length === 0 && (
+                                    <View style={styles.emptyChatContainer}>
+                                        <MessageSquare size={32} color={colors.textMuted} />
+                                        <Text style={styles.emptyChat}>Ask me anything about your tasks, goals, or schedule.</Text>
+                                    </View>
+                                )}
+                                {messages.map((msg, index) => (
+                                    <View key={index} style={[styles.messageRow, msg.role === 'user' ? styles.msgUser : styles.msgAI]}>
+                                        {msg.role === 'assistant' && (
+                                            <Bot size={20} color={colors.accent} style={styles.chatIcon} />
+                                        )}
+                                        <View style={[styles.bubble, msg.role === 'user' ? styles.bubbleUser : styles.bubbleAI]}>
+                                            <Text style={[styles.msgText, msg.role === 'user' && { color: colors.background }]}>{msg.content}</Text>
+                                        </View>
+                                    </View>
+                                ))}
+                                {isThinking && (
+                                    <View style={[styles.messageRow, styles.msgAI]}>
+                                        <Bot size={20} color={colors.accent} style={styles.chatIcon} />
+                                        <View style={[styles.bubble, styles.bubbleAI, { paddingHorizontal: 16 }]}>
+                                            <ActivityIndicator color={colors.accent} size="small" />
+                                        </View>
+                                    </View>
+                                )}
+                            </ScrollView>
+
+                            <View style={styles.inputContainer}>
+                                <TextInput
+                                    style={styles.input}
+                                    placeholder="Message AI..."
+                                    placeholderTextColor={colors.textMuted}
+                                    value={inputText}
+                                    onChangeText={setInputText}
+                                    editable={!isThinking}
+                                    multiline
+                                />
+                                <TouchableOpacity
+                                    style={[styles.sendBtn, (!inputText.trim() || isThinking) && { opacity: 0.5 }]}
+                                    onPress={handleSend}
+                                    disabled={!inputText.trim() || isThinking}
+                                >
+                                    <ArrowUp size={20} color={colors.surface} />
                                 </TouchableOpacity>
-                            )}
+                            </View>
                         </Card>
                     </View>
 
-                    <Text style={[styles.sectionTitle, { marginTop: spacing.lg }]}>CHAT WITH AI</Text>
-                    {messages.length === 0 && (
-                        <Text style={styles.emptyChat}>Ask me anything about your tasks, goals, or schedule.</Text>
-                    )}
-                    {messages.map((msg, index) => (
-                        <View key={index} style={[styles.messageRow, msg.role === 'user' ? styles.msgUser : styles.msgAI]}>
-                            {msg.role === 'assistant' && <MaterialCommunityIcons name="robot-outline" size={16} color={colors.accent} style={{ marginRight: 4, marginTop: 4 }} />}
-                            <View style={[styles.bubble, msg.role === 'user' ? styles.bubbleUser : styles.bubbleAI]}>
-                                <Text style={styles.msgText}>{msg.content}</Text>
-                            </View>
-                        </View>
-                    ))}
-                    {isThinking && (
-                        <View style={[styles.messageRow, styles.msgAI]}>
-                            <ActivityIndicator color={colors.accent} size="small" />
-                        </View>
-                    )}
                 </ScrollView>
-
-                <View style={styles.inputContainer}>
-                    <TextInput
-                        style={styles.input}
-                        placeholder="Ask your Personal AI..."
-                        placeholderTextColor={colors.textMuted}
-                        value={inputText}
-                        onChangeText={setInputText}
-                        editable={!isThinking}
-                        multiline
-                    />
-                    <TouchableOpacity
-                        style={[styles.sendBtn, (!inputText.trim() || isThinking) && { opacity: 0.5 }]}
-                        onPress={handleSend}
-                        disabled={!inputText.trim() || isThinking}
-                    >
-                        <MaterialCommunityIcons name="send" size={20} color={colors.background} />
-                    </TouchableOpacity>
-                </View>
             </KeyboardAvoidingView>
         </View>
     );
@@ -128,29 +164,73 @@ const AICompanionScreen = () => {
 const styles = StyleSheet.create({
     container: { flex: 1, backgroundColor: colors.background },
     scroll: { padding: spacing.lg, paddingBottom: spacing.xxxl },
-    headerCard: { alignItems: 'center', marginBottom: spacing.xl, backgroundColor: 'rgba(52,211,153,0.05)', borderColor: colors.accent },
-    headerTitle: { ...typography.h3, color: colors.textPrimary, marginTop: spacing.sm },
-    headerSub: { ...typography.caption, color: colors.textSecondary, textAlign: 'center', marginTop: spacing.xs },
-    section: { marginBottom: spacing.md },
-    sectionHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: spacing.sm },
-    sectionTitle: { ...typography.label, color: colors.textSecondary },
-    insightsCard: { minHeight: 120, justifyContent: 'center' },
-    btnAction: { backgroundColor: colors.accent, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', padding: spacing.md, borderRadius: 12, gap: spacing.sm },
-    btnActionText: { ...typography.bodyBold, color: colors.background },
-    loadingBox: { alignItems: 'center', padding: spacing.lg },
-    loadingText: { ...typography.caption, color: colors.textSecondary, marginTop: spacing.sm },
-    insightText: { ...typography.body, color: colors.textPrimary, lineHeight: 22 },
-    emptyChat: { ...typography.caption, color: colors.textMuted, textAlign: 'center', marginVertical: spacing.lg, fontStyle: 'italic' },
-    messageRow: { flexDirection: 'row', marginBottom: spacing.sm, maxWidth: '85%' },
+
+    // Generate Insights Intro
+    insightsSection: { marginBottom: spacing.xxl },
+    generateContainer: {
+        alignItems: 'center',
+        justifyContent: 'center',
+        paddingVertical: spacing.xl,
+        marginTop: spacing.md
+    },
+    robotIconContainer: {
+        width: 80,
+        height: 80,
+        borderRadius: 40,
+        backgroundColor: 'rgba(52, 211, 153, 0.1)',
+        alignItems: 'center',
+        justifyContent: 'center',
+        marginBottom: spacing.md
+    },
+    generateTitle: { ...typography.h2, color: colors.textPrimary, marginBottom: spacing.xs },
+    generateSub: { ...typography.body, color: colors.textSecondary, textAlign: 'center', marginBottom: spacing.xl, paddingHorizontal: spacing.lg },
+    generateBtn: { paddingHorizontal: spacing.xxl },
+
+    loadingBox: { alignItems: 'center', paddingVertical: spacing.xxxl },
+    loadingText: { ...typography.label, color: colors.textSecondary, marginTop: spacing.md },
+
+    // Insight Cards
+    insightsContainer: { marginTop: spacing.sm },
+    insightsHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: spacing.md },
+    sectionTitle: { ...typography.h3, color: colors.textPrimary, marginBottom: spacing.md },
+    insightCardItem: {
+        flexDirection: 'row',
+        alignItems: 'flex-start',
+        padding: spacing.lg,
+        marginBottom: spacing.md,
+        borderRadius: 16
+    },
+    insightIcon: { marginRight: spacing.md, marginTop: 2 },
+    insightText: { ...typography.body, color: colors.textPrimary, flex: 1, lineHeight: 22 },
+
+    // Chat Section
+    chatSection: { marginBottom: spacing.xl },
+    chatContainer: { padding: spacing.sm, borderRadius: 20 },
+    emptyChatContainer: { alignItems: 'center', paddingVertical: spacing.xl, gap: spacing.sm },
+    emptyChat: { ...typography.body, color: colors.textMuted, textAlign: 'center', paddingHorizontal: spacing.xl },
+
+    messageRow: { flexDirection: 'row', marginBottom: spacing.md, maxWidth: '90%', alignItems: 'flex-start' },
     msgUser: { alignSelf: 'flex-end', justifyContent: 'flex-end' },
     msgAI: { alignSelf: 'flex-start' },
-    bubble: { padding: spacing.md, borderRadius: 16 },
-    bubbleUser: { backgroundColor: colors.surface, borderBottomRightRadius: 4, borderWidth: 1, borderColor: colors.border },
+    chatIcon: { marginRight: spacing.sm, marginTop: 10 },
+    bubble: { paddingHorizontal: spacing.lg, paddingVertical: spacing.sm, borderRadius: 20 },
+    bubbleUser: { backgroundColor: colors.accent, borderBottomRightRadius: 4 },
     bubbleAI: { backgroundColor: 'rgba(52,211,153,0.1)', borderBottomLeftRadius: 4 },
     msgText: { ...typography.body, color: colors.textPrimary, lineHeight: 22 },
-    inputContainer: { flexDirection: 'row', padding: spacing.md, paddingBottom: spacing.xxl, backgroundColor: colors.background, borderTopWidth: 1, borderColor: colors.border, alignItems: 'flex-end', gap: spacing.sm },
-    input: { flex: 1, backgroundColor: colors.surface, color: colors.textPrimary, borderRadius: 20, paddingHorizontal: spacing.lg, paddingTop: 12, paddingBottom: 12, minHeight: 44, maxHeight: 120, borderWidth: 1, borderColor: colors.border },
-    sendBtn: { width: 44, height: 44, borderRadius: 22, backgroundColor: colors.accent, alignItems: 'center', justifyContent: 'center' }
+
+    inputContainer: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        marginTop: spacing.md,
+        borderRadius: 24,
+        backgroundColor: colors.background,
+        paddingHorizontal: spacing.sm,
+        paddingVertical: 6,
+        borderWidth: 1,
+        borderColor: colors.border
+    },
+    input: { flex: 1, color: colors.textPrimary, paddingHorizontal: spacing.md, minHeight: 40, maxHeight: 100 },
+    sendBtn: { width: 36, height: 36, borderRadius: 18, backgroundColor: colors.accent, alignItems: 'center', justifyContent: 'center' }
 });
 
 export default AICompanionScreen;

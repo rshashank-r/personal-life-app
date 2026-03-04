@@ -41,42 +41,50 @@ const JournalScreen = () => {
 
     return (
         <View style={styles.container}>
-            <Header title="Daily Reflection" subtitle={getToday()} />
+            <Header title="Reflection" subtitle={getToday()} />
             <ScrollView contentContainerStyle={styles.content}>
-                <Text style={styles.promptText}>Hey {profile?.name || ''},</Text>
-                <Text style={styles.promptSub}>How was your day today?</Text>
 
-                <Card style={styles.inputCard}>
-                    <Text style={styles.label}>Mood</Text>
-                    <View style={styles.moodRow}>
-                        {MOODS.map(m => (
-                            <TouchableOpacity
-                                key={m.label}
-                                style={[styles.moodBtn, mood === m.label && styles.moodActive]}
-                                onPress={() => setMood(m.label)}
-                            >
-                                <Text style={styles.moodEmoji}>{m.emoji}</Text>
-                                <Text style={styles.moodLabel}>{m.label}</Text>
-                            </TouchableOpacity>
-                        ))}
-                    </View>
+                <Text style={styles.promptQuestion}>How was your day?</Text>
 
-                    <Text style={[styles.label, { marginTop: spacing.md }]}>Note</Text>
+                <View style={styles.moodSelectorContainer}>
+                    {MOODS.map(m => (
+                        <TouchableOpacity
+                            key={m.label}
+                            style={[
+                                styles.moodCircle,
+                                mood === m.label && styles.moodCircleActive
+                            ]}
+                            onPress={() => setMood(m.label)}
+                        >
+                            <Text style={styles.moodEmoji}>{m.emoji}</Text>
+                        </TouchableOpacity>
+                    ))}
+                </View>
+
+                <Card style={styles.journalCard}>
                     <Input
                         value={note}
                         onChangeText={setNote}
-                        placeholder="Today I completed my ML assignment..."
+                        placeholder="Write something about today..."
                         multiline
+                        numberOfLines={8}
+                        style={styles.journalInput}
+                        containerStyle={styles.inputContainer}
                     />
 
-                    <View style={{ marginTop: spacing.md }}>
-                        <Button title="Save Reflection" onPress={save} disabled={!mood && !note} />
+                    <View style={styles.saveContainer}>
+                        <Button
+                            title="Save"
+                            onPress={save}
+                            disabled={!mood && !note}
+                            style={styles.saveButton}
+                        />
                     </View>
                 </Card>
 
                 {history.length > 0 && (
                     <View style={styles.historySection}>
-                        <Text style={styles.historyTitle}>Reflection History</Text>
+                        <Text style={styles.historyTitle}>Past Reflections</Text>
                         {history.map(item => {
                             const m = MOODS.find(x => x.label === item.mood);
                             return (
@@ -100,23 +108,71 @@ const JournalScreen = () => {
 
 const styles = StyleSheet.create({
     container: { flex: 1, backgroundColor: colors.background },
-    content: { paddingHorizontal: spacing.lg, paddingBottom: spacing.xxxl, paddingTop: spacing.md },
-    promptText: { ...typography.h2, color: colors.textPrimary },
-    promptSub: { ...typography.body, color: colors.textSecondary, marginBottom: spacing.lg },
-    inputCard: { padding: spacing.lg },
-    label: { ...typography.label, color: colors.textSecondary, marginBottom: spacing.xs },
-    moodRow: { flexDirection: 'row', justifyContent: 'space-between', marginBottom: spacing.sm },
-    moodBtn: { alignItems: 'center', padding: spacing.sm, borderRadius: 12, borderWidth: 1, borderColor: colors.border, flex: 1, marginHorizontal: 4 },
-    moodActive: { backgroundColor: 'rgba(255,255,255,0.1)', borderColor: colors.accent },
-    moodEmoji: { fontSize: 24, marginBottom: 4 },
-    moodLabel: { ...typography.caption, color: colors.textSecondary },
-    historySection: { marginTop: spacing.xxl },
+    content: { paddingHorizontal: spacing.lg, paddingBottom: spacing.xxxl, paddingTop: spacing.xl },
+
+    // Prompt & Mood
+    promptQuestion: {
+        ...typography.h2,
+        color: colors.textPrimary,
+        textAlign: 'center',
+        marginBottom: spacing.xl
+    },
+    moodSelectorContainer: {
+        flexDirection: 'row',
+        justifyContent: 'center',
+        gap: spacing.lg,
+        marginBottom: spacing.xxl
+    },
+    moodCircle: {
+        width: 60,
+        height: 60,
+        borderRadius: 30,
+        alignItems: 'center',
+        justifyContent: 'center',
+        backgroundColor: colors.surface,
+        borderWidth: 2,
+        borderColor: 'transparent'
+    },
+    moodCircleActive: {
+        backgroundColor: 'rgba(255,255,255,0.1)',
+        borderColor: colors.accent
+    },
+    moodEmoji: {
+        fontSize: 32
+    },
+
+    // Journal Input
+    journalCard: {
+        padding: spacing.md,
+        borderRadius: 16
+    },
+    inputContainer: {
+        marginBottom: 0,
+        borderWidth: 0,
+        backgroundColor: 'transparent',
+    },
+    journalInput: {
+        minHeight: 150,
+        textAlignVertical: 'top',
+        fontSize: 16,
+        paddingTop: spacing.sm
+    },
+    saveContainer: {
+        marginTop: spacing.lg,
+        alignItems: 'flex-end'
+    },
+    saveButton: {
+        minWidth: 120
+    },
+
+    // History
+    historySection: { marginTop: spacing.xxxl },
     historyTitle: { ...typography.h3, color: colors.textPrimary, marginBottom: spacing.md },
-    historyCard: { marginBottom: spacing.sm, padding: spacing.md },
+    historyCard: { marginBottom: spacing.sm, padding: spacing.md, borderRadius: 12 },
     historyHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: spacing.xs },
     historyDate: { ...typography.bodyBold, color: colors.accent },
-    historyMood: { fontSize: 20 },
-    historyNote: { ...typography.body, color: colors.textPrimary, marginTop: spacing.xs }
+    historyMood: { fontSize: 24 },
+    historyNote: { ...typography.body, color: colors.textSecondary, marginTop: spacing.xs, lineHeight: 22 }
 });
 
 export default JournalScreen;
