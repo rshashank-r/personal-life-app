@@ -1,22 +1,26 @@
 import React, { useEffect, useState } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
-import Animated, { useSharedValue, useAnimatedProps, withTiming, Easing, withRepeat, withSequence } from 'react-native-reanimated';
+import { View, Text, StyleSheet, TouchableOpacity, ScrollView } from 'react-native';
+import Animated, { useSharedValue, useAnimatedProps, withTiming, Easing } from 'react-native-reanimated';
 import Svg, { Circle } from 'react-native-svg';
-import { Play, Pause, RotateCcw } from 'lucide-react-native';
-import { Header, Card, Button } from '../../../shared/components';
+import { Play, Pause, RotateCcw, ChevronUp, ChevronDown } from 'lucide-react-native';
+import { Header } from '../../../shared/components';
 import { colors, spacing, typography } from '../../../core/theme';
 
 const AnimatedCircle = Animated.createAnimatedComponent(Circle);
-const CIRCLE_RADIUS = 120;
+const CIRCLE_RADIUS = 110;
 const CIRCLE_CIRCUMFERENCE = 2 * Math.PI * CIRCLE_RADIUS;
 
+const PRESET_DURATIONS = [5, 10, 15, 20, 25, 30, 45, 60, 90];
+
 const FocusModeScreen = () => {
-    const TOTAL_SECONDS = 25 * 60;
-    const [secondsLeft, setSecondsLeft] = useState(TOTAL_SECONDS);
+    const [durationMinutes, setDurationMinutes] = useState(25);
+    const [secondsLeft, setSecondsLeft] = useState(25 * 60);
     const [running, setRunning] = useState(false);
     const [sessionCount, setSessionCount] = useState(0);
+    const [hasStarted, setHasStarted] = useState(false);
 
-    const progress = useSharedValue(1); // 1 = full, 0 = empty
+    const totalSeconds = durationMinutes * 60;
+    const progress = useSharedValue(1);
 
     useEffect(() => {
         let timer;
@@ -27,10 +31,11 @@ const FocusModeScreen = () => {
                     if (next <= 0) {
                         setRunning(false);
                         setSessionCount(s => s + 1);
+                        setHasStarted(false);
                         progress.value = withTiming(0, { duration: 1000 });
                         return 0;
                     }
-                    progress.value = withTiming(next / TOTAL_SECONDS, { duration: 1000, easing: Easing.linear });
+                    progress.value = withTiming(next / totalSeconds, { duration: 1000, easing: Easing.linear });
                     return next;
                 });
             }, 1000);
@@ -38,20 +43,37 @@ const FocusModeScreen = () => {
             clearInterval(timer);
         }
         return () => clearInterval(timer);
-    }, [running]);
+    }, [running, totalSeconds]);
 
     const handleReset = () => {
         setRunning(false);
-        setSecondsLeft(TOTAL_SECONDS);
+        setHasStarted(false);
+        setSecondsLeft(durationMinutes * 60);
         progress.value = withTiming(1, { duration: 500 });
     };
 
     const toggleTimer = () => {
         if (secondsLeft === 0) {
-            setSecondsLeft(TOTAL_SECONDS);
+            setSecondsLeft(durationMinutes * 60);
             progress.value = 1;
         }
+        setHasStarted(true);
         setRunning(!running);
+    };
+
+    const adjustDuration = (delta) => {
+        if (running || hasStarted) return;
+        const newVal = Math.max(1, Math.min(120, durationMinutes + delta));
+        setDurationMinutes(newVal);
+        setSecondsLeft(newVal * 60);
+        progress.value = 1;
+    };
+
+    const selectPreset = (mins) => {
+        if (running || hasStarted) return;
+        setDurationMinutes(mins);
+        setSecondsLeft(mins * 60);
+        progress.value = 1;
     };
 
     const animatedProps = useAnimatedProps(() => ({
@@ -61,33 +83,34 @@ const FocusModeScreen = () => {
     const mm = String(Math.floor(secondsLeft / 60)).padStart(2, '0');
     const ss = String(secondsLeft % 60).padStart(2, '0');
 
+    const svgSize = CIRCLE_RADIUS * 2 + 40;
+
     return (
         <View style={styles.container}>
-            <Header title="Focus Mode" />
+            <Header title="Focus Mode" back />
 
-            <View style={styles.content}>
+            <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
                 <View style={styles.sessionBadge}>
                     <Text style={styles.sessionText}>Sessions Completed: {sessionCount}</Text>
                 </View>
 
-                <View style={styles.timerContainer}>
-                    <Svg width={CIRCLE_RADIUS * 2 + 40} height={CIRCLE_RADIUS * 2 + 40} style={styles.svg}>
-                        {/* Background Circle */}
+                {/* Timer Circle */}
+                <View style={[styles.timerContainer, { width: svgSize, height: svgSize }]}>
+                    <Svg width={svgSize} height={svgSize}>
                         <Circle
                             cx={CIRCLE_RADIUS + 20}
                             cy={CIRCLE_RADIUS + 20}
                             r={CIRCLE_RADIUS}
                             stroke={colors.surface}
-                            strokeWidth={20}
+                            strokeWidth={16}
                             fill="none"
                         />
-                        {/* Animated Progress Circle */}
                         <AnimatedCircle
                             cx={CIRCLE_RADIUS + 20}
                             cy={CIRCLE_RADIUS + 20}
                             r={CIRCLE_RADIUS}
                             stroke={colors.accent}
-                            strokeWidth={20}
+                            strokeWidth={16}
                             fill="none"
                             strokeDasharray={CIRCLE_CIRCUMFERENCE}
                             animatedProps={animatedProps}
@@ -97,10 +120,43 @@ const FocusModeScreen = () => {
                     </Svg>
                     <View style={styles.timeDisplay}>
                         <Text style={styles.timeText}>{mm}:{ss}</Text>
-                        <Text style={styles.timeLabel}>{running ? 'Focusing...' : 'Paused'}</Text>
+                        <Text style={styles.timeLabel}>
+                            {running ? 'Focusing...' : secondsLeft === 0 ? 'Done!' : hasStarted ? 'Paused' : 'Ready'}
+                        </Text>
                     </View>
                 </View>
 
+                {/* Duration adjuster — only when not running */}
+                {!hasStarted && (
+                    <View style={styles.durationSection}>
+                        <Text style={styles.durationLabel}>Duration</Text>
+                        <View style={styles.durationAdjuster}>
+                            <TouchableOpacity onPress={() => adjustDuration(-5)} style={styles.adjustBtn}>
+                                <ChevronDown size={24} color={colors.textSecondary} />
+                            </TouchableOpacity>
+                            <Text style={styles.durationValue}>{durationMinutes} min</Text>
+                            <TouchableOpacity onPress={() => adjustDuration(5)} style={styles.adjustBtn}>
+                                <ChevronUp size={24} color={colors.textSecondary} />
+                            </TouchableOpacity>
+                        </View>
+
+                        <View style={styles.presetRow}>
+                            {PRESET_DURATIONS.map(mins => (
+                                <TouchableOpacity
+                                    key={mins}
+                                    onPress={() => selectPreset(mins)}
+                                    style={[styles.presetChip, durationMinutes === mins && styles.presetChipActive]}
+                                >
+                                    <Text style={[styles.presetText, durationMinutes === mins && styles.presetTextActive]}>
+                                        {mins}m
+                                    </Text>
+                                </TouchableOpacity>
+                            ))}
+                        </View>
+                    </View>
+                )}
+
+                {/* Controls */}
                 <View style={styles.controlsRow}>
                     <TouchableOpacity onPress={handleReset} style={styles.secondaryBtn}>
                         <RotateCcw size={24} color={colors.textSecondary} />
@@ -116,19 +172,27 @@ const FocusModeScreen = () => {
 
                     <View style={styles.secondaryBtnSpacer} />
                 </View>
-            </View>
+
+                {/* Tips */}
+                <View style={styles.tipBox}>
+                    <Text style={styles.tipTitle}>Focus Tips</Text>
+                    <Text style={styles.tipText}>• Put your phone on Do Not Disturb</Text>
+                    <Text style={styles.tipText}>• Close all unnecessary apps</Text>
+                    <Text style={styles.tipText}>• Take a 5-min break after each session</Text>
+                    <Text style={styles.tipText}>• After 4 sessions, take a 15-30 min break</Text>
+                </View>
+            </ScrollView>
         </View>
     );
 };
 
 const styles = StyleSheet.create({
     container: { flex: 1, backgroundColor: colors.background },
-    content: {
-        flex: 1,
+    scrollContent: {
         alignItems: 'center',
-        justifyContent: 'center',
         paddingHorizontal: spacing.xl,
-        paddingBottom: spacing.xxxl
+        paddingBottom: spacing.xxxl,
+        paddingTop: spacing.lg,
     },
 
     sessionBadge: {
@@ -136,30 +200,24 @@ const styles = StyleSheet.create({
         paddingHorizontal: spacing.lg,
         paddingVertical: spacing.sm,
         borderRadius: 20,
-        marginBottom: spacing.xxxl,
+        marginBottom: spacing.xl,
         borderWidth: 1,
         borderColor: 'rgba(139, 92, 246, 0.2)'
     },
-    sessionText: {
-        ...typography.bodyBold,
-        color: colors.secondary
-    },
+    sessionText: { ...typography.bodyBold, color: colors.secondary },
 
     timerContainer: {
         alignItems: 'center',
         justifyContent: 'center',
-        marginBottom: spacing.xxxl
-    },
-    svg: {
-        position: 'absolute'
+        marginBottom: spacing.xl,
     },
     timeDisplay: {
+        position: 'absolute',
         alignItems: 'center',
-        justifyContent: 'center'
+        justifyContent: 'center',
     },
     timeText: {
-        fontFamily: 'Inter',
-        fontSize: 64,
+        fontSize: 56,
         fontWeight: '700',
         color: colors.textPrimary,
         letterSpacing: 2
@@ -170,12 +228,76 @@ const styles = StyleSheet.create({
         marginTop: spacing.xs
     },
 
+    // Duration selector
+    durationSection: {
+        alignItems: 'center',
+        marginBottom: spacing.xl,
+        width: '100%',
+    },
+    durationLabel: {
+        ...typography.caption,
+        color: colors.textMuted,
+        marginBottom: spacing.sm,
+        textTransform: 'uppercase',
+        letterSpacing: 1,
+    },
+    durationAdjuster: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        gap: spacing.lg,
+        marginBottom: spacing.md,
+    },
+    adjustBtn: {
+        width: 44,
+        height: 44,
+        borderRadius: 22,
+        backgroundColor: colors.surface,
+        alignItems: 'center',
+        justifyContent: 'center',
+        borderWidth: 1,
+        borderColor: colors.border,
+    },
+    durationValue: {
+        ...typography.h2,
+        color: colors.accent,
+        minWidth: 80,
+        textAlign: 'center',
+    },
+    presetRow: {
+        flexDirection: 'row',
+        flexWrap: 'wrap',
+        gap: spacing.sm,
+        justifyContent: 'center',
+    },
+    presetChip: {
+        paddingHorizontal: 14,
+        paddingVertical: 6,
+        borderRadius: 16,
+        backgroundColor: colors.surface,
+        borderWidth: 1,
+        borderColor: colors.border,
+    },
+    presetChipActive: {
+        backgroundColor: colors.accentDim,
+        borderColor: colors.accent,
+    },
+    presetText: {
+        ...typography.caption,
+        color: colors.textMuted,
+        fontWeight: '600',
+    },
+    presetTextActive: {
+        color: colors.accent,
+    },
+
+    // Controls
     controlsRow: {
         flexDirection: 'row',
         alignItems: 'center',
         justifyContent: 'center',
         width: '100%',
-        gap: spacing.xxl
+        gap: spacing.xxl,
+        marginBottom: spacing.xxl,
     },
     playPauseBtn: {
         width: 80,
@@ -200,10 +322,19 @@ const styles = StyleSheet.create({
         borderWidth: 1,
         borderColor: colors.border
     },
-    secondaryBtnSpacer: {
-        width: 56,
-        height: 56
-    }
+    secondaryBtnSpacer: { width: 56, height: 56 },
+
+    // Tips
+    tipBox: {
+        backgroundColor: colors.surface,
+        borderRadius: 16,
+        padding: spacing.lg,
+        width: '100%',
+        borderWidth: 1,
+        borderColor: colors.border,
+    },
+    tipTitle: { ...typography.bodyBold, color: colors.textPrimary, marginBottom: spacing.sm },
+    tipText: { ...typography.caption, color: colors.textSecondary, lineHeight: 20, marginBottom: 4 },
 });
 
 export default FocusModeScreen;

@@ -42,9 +42,14 @@ export const notificationService = {
         try {
             const triggerDate = new Date(timestamp);
             if (triggerDate <= new Date()) return null;
-            const trigger = repeatFrequency === 'weekly'
-                ? { type: 'weekly', weekday: triggerDate.getDay() + 1, hour: triggerDate.getHours(), minute: triggerDate.getMinutes() }
-                : { type: 'daily', hour: triggerDate.getHours(), minute: triggerDate.getMinutes() };
+            let trigger;
+            if (repeatFrequency === 'hourly') {
+                trigger = { type: 'timeInterval', seconds: 3600, repeats: true };
+            } else if (repeatFrequency === 'weekly') {
+                trigger = { type: 'weekly', weekday: triggerDate.getDay() + 1, hour: triggerDate.getHours(), minute: triggerDate.getMinutes() };
+            } else {
+                trigger = { type: 'daily', hour: triggerDate.getHours(), minute: triggerDate.getMinutes() };
+            }
             return Notifications.scheduleNotificationAsync({
                 content: { title, body, sound: true },
                 trigger,

@@ -11,7 +11,6 @@ import { notificationService } from './src/core/notifications';
 import { colors, typography } from './src/core/theme';
 import useProfileStore from './src/core/store/useProfileStore';
 import OnboardingScreen from './src/features/onboarding/screens/OnboardingScreen';
-import { PrivacyShield } from './src/shared/components/PrivacyShield';
 
 export default function App() {
   const [ready, setReady] = useState(false);
@@ -50,28 +49,26 @@ export default function App() {
       {!profile ? (
         <OnboardingScreen />
       ) : (
-        <PrivacyShield>
-          <NavigationContainer
-            theme={{
-              dark: true,
-              colors: {
-                primary: colors.accent,
-                background: colors.background,
-                card: colors.surface,
-                text: colors.textPrimary,
-                border: colors.border,
-                notification: colors.accent,
-              },
-              fonts: {
-                regular: { fontFamily: 'System', fontWeight: '400' },
-                medium: { fontFamily: 'System', fontWeight: '500' },
-                bold: { fontFamily: 'System', fontWeight: '700' },
-                heavy: { fontFamily: 'System', fontWeight: '900' },
-              },
-            }}>
-            <Navigation />
-          </NavigationContainer>
-        </PrivacyShield>
+        <NavigationContainer
+          theme={{
+            dark: true,
+            colors: {
+              primary: colors.accent,
+              background: colors.background,
+              card: colors.surface,
+              text: colors.textPrimary,
+              border: colors.border,
+              notification: colors.accent,
+            },
+            fonts: {
+              regular: { fontFamily: 'System', fontWeight: '400' },
+              medium: { fontFamily: 'System', fontWeight: '500' },
+              bold: { fontFamily: 'System', fontWeight: '700' },
+              heavy: { fontFamily: 'System', fontWeight: '900' },
+            },
+          }}>
+          <Navigation />
+        </NavigationContainer>
       )}
     </GestureHandlerRootView>
   );

@@ -1,5 +1,5 @@
-import React, { useState, useCallback } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, ActivityIndicator, Platform, Alert, NativeModules } from 'react-native';
+import React, { useState, useCallback, useEffect, useRef } from 'react';
+import { View, Text, StyleSheet, TouchableOpacity, ActivityIndicator, Platform, Alert, NativeModules, AppState } from 'react-native';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { Card } from '../../../shared/components';
 import { colors, typography, spacing } from '../../../core/theme';
@@ -68,6 +68,7 @@ const ScreenTimeTracker = () => {
     const [hasPermission, setHasPermission] = useState(false);
     const [error, setError] = useState(null);
     const [moduleAvailable, setModuleAvailable] = useState(true);
+    const appStateRef = useRef(AppState.currentState);
 
     const checkPermissionAndLoad = async () => {
         if (Platform.OS !== 'android') return;
@@ -106,6 +107,18 @@ const ScreenTimeTracker = () => {
             checkPermissionAndLoad();
         }, [])
     );
+
+    // Auto-refresh when user returns from settings (permission grant)
+    useEffect(() => {
+        const subscription = AppState.addEventListener('change', nextAppState => {
+            if (appStateRef.current.match(/inactive|background/) && nextAppState === 'active') {
+                // User returned to app — re-check permission and reload
+                checkPermissionAndLoad();
+            }
+            appStateRef.current = nextAppState;
+        });
+        return () => subscription.remove();
+    }, []);
 
     const loadStats = async () => {
         if (!queryAndAggregateUsageStats) {

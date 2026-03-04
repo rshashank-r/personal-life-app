@@ -95,7 +95,7 @@ const ReminderListScreen = ({ navigation }) => {
                 <Input label="DESCRIPTION" value={description} onChangeText={setDescription} placeholder="Optional" multiline />
                 <DateTimeField label="DATE & TIME" value={remindAt} onChange={setRemindAt} mode="datetime" />
                 <View style={styles.repeatRow}>
-                    {['none', 'daily', 'weekly'].map((r) => (
+                    {['none', 'hourly', 'daily', 'weekly'].map((r) => (
                         <Button key={r} title={r.charAt(0).toUpperCase() + r.slice(1)} variant={repeatType === r ? 'secondary' : 'ghost'} size="sm" onPress={() => setRepeatType(r)} style={{ flex: 1 }} />
                     ))}
                 </View>

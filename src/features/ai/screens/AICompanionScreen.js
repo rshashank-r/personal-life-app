@@ -1,9 +1,109 @@
-import React, { useState } from 'react';
+import React, { useState, useRef } from 'react';
 import { View, Text, StyleSheet, ScrollView, TextInput, TouchableOpacity, ActivityIndicator, KeyboardAvoidingView, Platform, Alert } from 'react-native';
 import { Bot, RefreshCw, Lightbulb, MessageSquare, ArrowUp } from 'lucide-react-native';
 import { Header, Card, Button } from '../../../shared/components';
 import { colors, typography, spacing } from '../../../core/theme';
 import aiService from '../../../core/services/aiService';
+
+// Clean raw AI response — strip JSON wrappers, code fences, etc.
+const cleanAIResponse = (raw) => {
+    if (!raw || typeof raw !== 'string') return '';
+    let text = raw.trim();
+
+    // Try to parse as JSON and extract content
+    try {
+        const parsed = JSON.parse(text);
+        if (typeof parsed === 'string') return parsed;
+        if (parsed.content) return String(parsed.content);
+        if (parsed.message) return String(parsed.message);
+        if (parsed.text) return String(parsed.text);
+        if (parsed.choices?.[0]?.message?.content) return String(parsed.choices[0].message.content);
+        // If it's an object we can't extract from, stringify nicely
+        return JSON.stringify(parsed, null, 2);
+    } catch {
+        // Not JSON — continue processing
+    }
+
+    // Strip markdown code fences wrapping JSON
+    text = text.replace(/^```(?:json)?\s*\n?/i, '').replace(/\n?```\s*$/i, '');
+
+    // Try parsing again after stripping fences
+    try {
+        const parsed = JSON.parse(text);
+        if (typeof parsed === 'string') return parsed;
+        if (parsed.content) return String(parsed.content);
+        if (parsed.message) return String(parsed.message);
+        if (parsed.response) return String(parsed.response);
+        return JSON.stringify(parsed, null, 2);
+    } catch {
+        // Not JSON — it's plain text/markdown, return as-is
+    }
+
+    return text;
+};
+
+// Render markdown-like text into styled components
+const RenderFormattedText = ({ text }) => {
+    if (!text) return null;
+
+    const lines = text.split('\n');
+
+    return lines.map((line, idx) => {
+        const trimmed = line.trim();
+        if (!trimmed) return <View key={idx} style={{ height: 8 }} />;
+
+        // Headers
+        if (trimmed.startsWith('### ')) {
+            return <Text key={idx} style={styles.mdH3}>{trimmed.slice(4)}</Text>;
+        }
+        if (trimmed.startsWith('## ')) {
+            return <Text key={idx} style={styles.mdH2}>{trimmed.slice(3)}</Text>;
+        }
+        if (trimmed.startsWith('# ')) {
+            return <Text key={idx} style={styles.mdH1}>{trimmed.slice(2)}</Text>;
+        }
+
+        // Bullet points
+        if (trimmed.startsWith('- ') || trimmed.startsWith('* ') || /^\d+\.\s/.test(trimmed)) {
+            const bulletText = trimmed.replace(/^[-*]\s|^\d+\.\s/, '');
+            return (
+                <View key={idx} style={styles.bulletRow}>
+                    <Text style={styles.bulletDot}>•</Text>
+                    <Text style={styles.bulletText}>{renderInlineFormatting(bulletText)}</Text>
+                </View>
+            );
+        }
+
+        // Regular paragraph
+        return <Text key={idx} style={styles.mdParagraph}>{renderInlineFormatting(trimmed)}</Text>;
+    });
+};
+
+// Handle bold (**text**) and italic (*text*)
+const renderInlineFormatting = (text) => {
+    if (!text) return text;
+
+    const parts = [];
+    let remaining = text;
+    let key = 0;
+
+    while (remaining.length > 0) {
+        // Bold: **text**
+        const boldMatch = remaining.match(/\*\*(.+?)\*\*/);
+        if (boldMatch) {
+            const before = remaining.slice(0, boldMatch.index);
+            if (before) parts.push(<Text key={key++}>{before}</Text>);
+            parts.push(<Text key={key++} style={{ fontWeight: '700', color: colors.accent }}>{boldMatch[1]}</Text>);
+            remaining = remaining.slice(boldMatch.index + boldMatch[0].length);
+            continue;
+        }
+        // No more formatting
+        parts.push(<Text key={key++}>{remaining}</Text>);
+        break;
+    }
+
+    return parts.length === 1 ? parts[0] : parts;
+};
 
 const AICompanionScreen = () => {
     const [insightsRaw, setInsightsRaw] = useState(null);
@@ -12,6 +112,7 @@ const AICompanionScreen = () => {
     const [messages, setMessages] = useState([]);
     const [inputText, setInputText] = useState('');
     const [isThinking, setIsThinking] = useState(false);
+    const chatScrollRef = useRef(null);
 
     const loadInsights = async () => {
         setLoadingInsights(true);
@@ -37,6 +138,7 @@ const AICompanionScreen = () => {
         try {
             const reply = await aiService.chatStream(newHistory);
             setMessages([...newHistory, { role: 'assistant', content: reply }]);
+            setTimeout(() => chatScrollRef.current?.scrollToEnd?.({ animated: true }), 100);
         } catch (error) {
             Alert.alert("Chat Error", error.message);
         } finally {
@@ -44,10 +146,7 @@ const AICompanionScreen = () => {
         }
     };
 
-    // Parse insights strings into bullet points or separate sentences
-    const insightPoints = insightsRaw
-        ? insightsRaw.split(/\n+/).map(s => s.trim()).filter(Boolean)
-        : [];
+    const cleanedInsights = insightsRaw ? cleanAIResponse(insightsRaw) : '';
 
     return (
         <View style={styles.container}>
@@ -86,18 +185,9 @@ const AICompanionScreen = () => {
                                         <RefreshCw size={24} color={colors.textSecondary} />
                                     </TouchableOpacity>
                                 </View>
-                                {insightPoints.length > 0 ? (
-                                    insightPoints.map((point, idx) => (
-                                        <Card key={`insight-${idx}`} glow style={styles.insightCardItem}>
-                                            <Lightbulb size={24} color={colors.warning} style={styles.insightIcon} />
-                                            <Text style={styles.insightText}>{point}</Text>
-                                        </Card>
-                                    ))
-                                ) : (
-                                    <Card style={styles.insightCardItem}>
-                                        <Text style={styles.insightText}>Not enough data to generate insights today.</Text>
-                                    </Card>
-                                )}
+                                <Card glow style={styles.insightCard}>
+                                    <RenderFormattedText text={cleanedInsights} />
+                                </Card>
                             </View>
                         )}
                     </View>
@@ -107,7 +197,7 @@ const AICompanionScreen = () => {
                         <Text style={styles.sectionTitle}>Chat Assistant</Text>
 
                         <Card style={styles.chatContainer}>
-                            <ScrollView nestedScrollEnabled style={{ maxHeight: 300, minHeight: 200 }}>
+                            <ScrollView ref={chatScrollRef} nestedScrollEnabled style={{ maxHeight: 350, minHeight: 200 }}>
                                 {messages.length === 0 && (
                                     <View style={styles.emptyChatContainer}>
                                         <MessageSquare size={32} color={colors.textMuted} />
@@ -120,7 +210,11 @@ const AICompanionScreen = () => {
                                             <Bot size={20} color={colors.accent} style={styles.chatIcon} />
                                         )}
                                         <View style={[styles.bubble, msg.role === 'user' ? styles.bubbleUser : styles.bubbleAI]}>
-                                            <Text style={[styles.msgText, msg.role === 'user' && { color: colors.background }]}>{msg.content}</Text>
+                                            {msg.role === 'assistant' ? (
+                                                <RenderFormattedText text={cleanAIResponse(msg.content)} />
+                                            ) : (
+                                                <Text style={[styles.msgText, { color: colors.background }]}>{msg.content}</Text>
+                                            )}
                                         </View>
                                     </View>
                                 ))}
@@ -193,15 +287,16 @@ const styles = StyleSheet.create({
     insightsContainer: { marginTop: spacing.sm },
     insightsHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: spacing.md },
     sectionTitle: { ...typography.h3, color: colors.textPrimary, marginBottom: spacing.md },
-    insightCardItem: {
-        flexDirection: 'row',
-        alignItems: 'flex-start',
-        padding: spacing.lg,
-        marginBottom: spacing.md,
-        borderRadius: 16
-    },
-    insightIcon: { marginRight: spacing.md, marginTop: 2 },
-    insightText: { ...typography.body, color: colors.textPrimary, flex: 1, lineHeight: 22 },
+    insightCard: { padding: spacing.lg, borderRadius: 16 },
+
+    // Markdown rendering
+    mdH1: { ...typography.h2, color: colors.accent, marginBottom: spacing.sm, marginTop: spacing.xs },
+    mdH2: { ...typography.h3, color: colors.accent, marginBottom: spacing.sm, marginTop: spacing.xs },
+    mdH3: { ...typography.bodyBold, color: colors.accent, marginBottom: spacing.xs, marginTop: spacing.xs },
+    mdParagraph: { ...typography.body, color: colors.textPrimary, lineHeight: 22, marginBottom: spacing.xs },
+    bulletRow: { flexDirection: 'row', alignItems: 'flex-start', marginBottom: spacing.xs, paddingLeft: spacing.sm },
+    bulletDot: { color: colors.accent, fontSize: 16, lineHeight: 22, marginRight: spacing.sm, fontWeight: '700' },
+    bulletText: { ...typography.body, color: colors.textPrimary, lineHeight: 22, flex: 1 },
 
     // Chat Section
     chatSection: { marginBottom: spacing.xl },
@@ -213,7 +308,7 @@ const styles = StyleSheet.create({
     msgUser: { alignSelf: 'flex-end', justifyContent: 'flex-end' },
     msgAI: { alignSelf: 'flex-start' },
     chatIcon: { marginRight: spacing.sm, marginTop: 10 },
-    bubble: { paddingHorizontal: spacing.lg, paddingVertical: spacing.sm, borderRadius: 20 },
+    bubble: { paddingHorizontal: spacing.lg, paddingVertical: spacing.sm, borderRadius: 20, maxWidth: '100%' },
     bubbleUser: { backgroundColor: colors.accent, borderBottomRightRadius: 4 },
     bubbleAI: { backgroundColor: 'rgba(52,211,153,0.1)', borderBottomLeftRadius: 4 },
     msgText: { ...typography.body, color: colors.textPrimary, lineHeight: 22 },

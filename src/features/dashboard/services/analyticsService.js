@@ -94,46 +94,73 @@ const analyticsService = {
         const startIso = `${year}-01-01T00:00:00.000Z`;
         const endIso = `${year}-12-31T23:59:59.999Z`;
 
-        const [completedTasks, allTrackers, memories, completedByMonth] = await Promise.all([
-            taskService.getCompletedInRange(startIso, endIso),
-            trackerService.getAllTodayStatus(), // simplified for now since trackers don't have historical "goals" easily available without entries lookup
-            import('../../memoryVault/services/memoryService').then(m => m.default.getAll()),
-            import('../../tasks/services/taskService').then(t => t.default.query(`
-                SELECT strftime('%m', updated_at) as month, count(*) as count 
-                FROM tasks 
-                WHERE status='completed' AND updated_at BETWEEN ? AND ? 
-                GROUP BY month`, [startIso, endIso]))
-        ]);
+        try {
+            const [completedTasks, allTrackers] = await Promise.all([
+                taskService.getCompletedInRange(startIso, endIso),
+                trackerService.getAllTodayStatus(),
+            ]);
 
-        // Fallback for habit success rate based on today
-        const habitSuccessRate = allTrackers.length
-            ? Math.round((allTrackers.filter((t) => t.done).length / allTrackers.length) * 100)
-            : 0;
+            // Get memories safely
+            let memories = [];
+            try {
+                const memModule = await import('../../memoryVault/services/memoryService');
+                memories = await memModule.default.getAll();
+            } catch (e) {
+                console.warn('[YearlyReport] Could not load memories:', e);
+            }
 
-        const months = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
-        let bestMonth = 'N/A';
-        let bestCount = 0;
+            // Get monthly completion data using db directly
+            let completedByMonth = [];
+            try {
+                const dbModule = await import('../../../core/database');
+                completedByMonth = await dbModule.default.query(
+                    `SELECT strftime('%m', updated_at) as month, count(*) as count 
+                     FROM tasks 
+                     WHERE status='completed' AND updated_at BETWEEN ? AND ? 
+                     GROUP BY month`,
+                    [startIso, endIso]
+                );
+            } catch (e) {
+                console.warn('[YearlyReport] Could not load monthly data:', e);
+            }
 
-        if (completedByMonth && completedByMonth.length > 0) {
-            completedByMonth.forEach((item) => {
-                const count = Number(item.count || 0);
-                if (count > bestCount) {
-                    bestCount = count;
-                    bestMonth = months[parseInt(item.month) - 1];
-                }
-            });
+            const habitSuccessRate = allTrackers.length
+                ? Math.round((allTrackers.filter((t) => t.done).length / allTrackers.length) * 100)
+                : 0;
+
+            const months = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
+            let bestMonth = 'N/A';
+            let bestCount = 0;
+
+            if (completedByMonth && completedByMonth.length > 0) {
+                completedByMonth.forEach((item) => {
+                    const count = Number(item.count || 0);
+                    if (count > bestCount) {
+                        bestCount = count;
+                        bestMonth = months[parseInt(item.month) - 1];
+                    }
+                });
+            }
+
+            const memoriesThisYear = memories.filter(m => new Date(m.created_at).getFullYear() === year);
+
+            return {
+                year,
+                tasksCompleted: completedTasks.length,
+                habitsSuccessRate: habitSuccessRate,
+                memoriesRecorded: memoriesThisYear.length,
+                topProductiveMonth: bestMonth
+            };
+        } catch (e) {
+            console.error('[YearlyReport] Error getting yearly insights:', e);
+            return {
+                year,
+                tasksCompleted: 0,
+                habitsSuccessRate: 0,
+                memoriesRecorded: 0,
+                topProductiveMonth: 'N/A'
+            };
         }
-
-        // Filter memories to just this year
-        const memoriesThisYear = memories.filter(m => new Date(m.created_at).getFullYear() === year);
-
-        return {
-            year,
-            tasksCompleted: completedTasks.length,
-            habitsSuccessRate: habitSuccessRate,
-            memoriesRecorded: memoriesThisYear.length,
-            topProductiveMonth: bestMonth
-        };
     }
 };
 
