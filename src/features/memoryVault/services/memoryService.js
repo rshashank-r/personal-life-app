@@ -49,6 +49,11 @@ const memoryService = {
         return this.getById(id);
     },
 
+    async getRandom() {
+        const rows = await db.query('SELECT * FROM memories ORDER BY RANDOM() LIMIT 1');
+        return rows[0] || null;
+    },
+
     async update(id, fields) {
         const sets = [];
         const values = [];

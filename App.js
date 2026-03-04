@@ -22,6 +22,22 @@ export default function App() {
         await db.getDB();
         await notificationService.init();
         await useProfileStore.getState().loadProfile();
+
+        // Schedule a "Relive a Memory" notification every 48 hours
+        try {
+          const memoryService = (await import('./src/features/memoryVault/services/memoryService')).default;
+          const memory = await memoryService.getRandom();
+          if (memory) {
+            await notificationService.scheduleRecurringNotification({
+              title: '💭 Relive a Memory',
+              body: memory.title || 'Open the app to revisit a past memory',
+              timestamp: Date.now() + 48 * 60 * 60 * 1000, // 48 hours from now
+              repeatFrequency: 'memory48h', // custom — will use timeInterval
+            });
+          }
+        } catch (e) {
+          console.warn('Memory notification scheduling failed:', e);
+        }
       } catch (e) {
         console.error('App init error:', e);
       } finally {

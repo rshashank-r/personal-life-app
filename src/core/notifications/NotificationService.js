@@ -45,6 +45,8 @@ export const notificationService = {
             let trigger;
             if (repeatFrequency === 'hourly') {
                 trigger = { type: 'timeInterval', seconds: 3600, repeats: true };
+            } else if (repeatFrequency === 'memory48h') {
+                trigger = { type: 'timeInterval', seconds: 48 * 60 * 60, repeats: true };
             } else if (repeatFrequency === 'weekly') {
                 trigger = { type: 'weekly', weekday: triggerDate.getDay() + 1, hour: triggerDate.getHours(), minute: triggerDate.getMinutes() };
             } else {
