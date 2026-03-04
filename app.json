@@ -1,28 +1,53 @@
 {
   "expo": {
-    "name": "PersonalLifeApp52",
-    "slug": "PersonalLifeApp52",
+    "name": "Personal Life",
+    "slug": "PersonalLifeApp",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
-    "userInterfaceStyle": "light",
+    "userInterfaceStyle": "dark",
     "newArchEnabled": true,
     "splash": {
       "image": "./assets/splash-icon.png",
       "resizeMode": "contain",
-      "backgroundColor": "#ffffff"
+      "backgroundColor": "#0D0F14"
     },
     "ios": {
-      "supportsTablet": true
+      "supportsTablet": true,
+      "icon": "./assets/icon.png"
     },
     "android": {
+      "icon": "./assets/icon.png",
       "adaptiveIcon": {
         "foregroundImage": "./assets/adaptive-icon.png",
-        "backgroundColor": "#ffffff"
-      }
+        "backgroundColor": "#0D0F14"
+      },
+      "package": "com.personallife.app",
+      "permissions": [
+        "android.permission.PACKAGE_USAGE_STATS"
+      ]
     },
     "web": {
       "favicon": "./assets/favicon.png"
+    },
+    "plugins": [
+      "expo-sqlite",
+      "expo-secure-store",
+      [
+        "expo-notifications",
+        {
+          "icon": "./assets/adaptive-icon.png",
+          "color": "#00D4FF"
+        }
+      ],
+      "expo-asset",
+      "expo-font",
+      "react-native-android-widget"
+    ],
+    "extra": {
+      "eas": {
+        "projectId": "cae2dea8-e743-4173-8c40-07f17d6d1021"
+      }
     }
   }
 }
